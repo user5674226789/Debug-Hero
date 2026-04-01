@@ -1,124 +1,256 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { worlds } from './data/gameConfig';
 import CodeEditor from './CodeEditor';
 import MobDisplay from './MobDisplay';
+import Intro from './Intro';
 
-const Game = () => {
-  // Проверка: загрузились ли миры вообще
-  if (!worlds || !Array.isArray(worlds) || worlds.length === 0) {
-    return <div style={{color: 'white', padding: '20px'}}>Ошибка: worlds не найден в gameConfig.js</div>;
-  }
-
-  const [currentWorld, setCurrentWorld] = useState(0);
-  const [currentLevel, setCurrentLevel] = useState(0);
-  const [playerX, setPlayerX] = useState(100);
-  const [playerY, setPlayerY] = useState(0);
-  const [isNearMob, setIsNearMob] = useState(false);
-  const [showPortal, setShowPortal] = useState(false);
-  const [showWorldTitle, setShowWorldTitle] = useState(true);
-  const [isSuckingIn, setIsSuckingIn] = useState(false);
-
-  // Безопасное получение данных (чтобы не было черного экрана)
-  const worldData = worlds[currentWorld] || worlds[0];
-  const levels = worldData.levels || [];
-  const levelData = levels[currentLevel] || (levels[0] ? levels[0] : null);
-
-  const mobX = 1800;
-  const portalX = 2200;
-  const cameraX = Math.max(0, playerX - 300);
-
-  const keys = useRef({});
-  const pos = useRef({ x: 100, y: 0 });
-  const velocityY = useRef(0);
-  const isOnGround = useRef(true);
-  const requestRef = useRef();
-
-  const handleNextLevel = () => {
-    if (currentLevel < levels.length - 1) {
-      setCurrentLevel(prev => prev + 1);
-    } else if (currentWorld < worlds.length - 1) {
-      setCurrentWorld(prev => prev + 1);
-      setCurrentLevel(0);
-    }
-    setIsSuckingIn(false);
-  };
-
-  const update = () => {
-    if (isSuckingIn) {
-      requestRef.current = requestAnimationFrame(update);
-      return;
-    }
-    let nextX = pos.current.x;
-    let nextY = pos.current.y;
-    let moveDir = 0;
-    if (!isNearMob) {
-      if (keys.current['KeyD'] || keys.current['ArrowRight'] || keys.current['d']) moveDir += 1;
-      if (keys.current['KeyA'] || keys.current['ArrowLeft'] || keys.current['a']) moveDir -= 1;
-    }
-    nextX += moveDir * 7;
-
-    if (!isNearMob && (keys.current['Space'] || keys.current['KeyW'] || keys.current['w']) && isOnGround.current) {
-      velocityY.current = 14;
-      isOnGround.current = false;
-    }
-    velocityY.current -= 0.6;
-    nextY += velocityY.current;
-    if (nextY <= 0) { nextY = 0; velocityY.current = 0; isOnGround.current = true; }
-
-    // Проверка портала
-    if (showPortal && Math.abs(nextX - portalX) < 60) {
-      setIsSuckingIn(true);
-      setTimeout(() => handleNextLevel(), 800);
-      return;
-    }
-    // Проверка моба
-    if (!showPortal && !isNearMob && Math.abs(nextX - mobX) < 80) {
-      setIsNearMob(true);
-    }
-
-    pos.current.x = Math.max(0, nextX);
-    pos.current.y = nextY;
-    setPlayerX(pos.current.x);
-    setPlayerY(nextY);
-    requestRef.current = requestAnimationFrame(update);
-  };
-
+// Допоміжний компонент для сюжетного переходу між світами
+const WorldTransition = ({ nextWorldName, onComplete }) => {
   useEffect(() => {
-    if (requestRef.current) cancelAnimationFrame(requestRef.current);
-    pos.current = { x: 100, y: 0 };
-    setPlayerX(100); setPlayerY(0);
-    setIsNearMob(false); setShowPortal(false); setIsSuckingIn(false); setShowWorldTitle(true);
-    const timer = setTimeout(() => setShowWorldTitle(false), 3000);
-    requestRef.current = requestAnimationFrame(update);
-    return () => { cancelAnimationFrame(requestRef.current); clearTimeout(timer); };
-  }, [currentLevel, currentWorld]);
-
-  useEffect(() => {
-    const onDown = (e) => { keys.current[e.code] = true; keys.current[e.key.toLowerCase()] = true; };
-    const onUp = (e) => { keys.current[e.code] = false; keys.current[e.key.toLowerCase()] = false; };
-    window.addEventListener('keydown', onDown);
-    window.addEventListener('keyup', onUp);
-    return () => { window.removeEventListener('keydown', onDown); window.removeEventListener('keyup', onUp); };
-  }, []);
+    const timer = setTimeout(onComplete, 3000);
+    return () => clearTimeout(timer);
+  }, [onComplete]);
 
   return (
-    <div style={{ background: worldData?.theme?.bg || '#111', width: '100vw', height: '100vh', overflow: 'hidden', position: 'relative' }}>
-      <div style={{ position: 'absolute', top: '30%', left: '50%', transform: 'translate(-50%, -50%)', opacity: showWorldTitle ? 1 : 0, transition: 'opacity 1s', color: worldData?.theme?.accent || 'cyan', fontSize: '3rem', pointerEvents: 'none' }}>
-        <h1>{worldData?.name}</h1>
-      </div>
-      <div style={{ transform: `translateX(-${cameraX}px)`, width: '5000px', height: '100%', position: 'relative' }}>
-        <div style={{ position: 'absolute', bottom: '40px', width: '100%', height: '2px', background: 'white', opacity: 0.1 }}></div>
-        {!showPortal && <div style={{ position: 'absolute', left: mobX, bottom: '40px' }}><MobDisplay image={levelData?.mob} /></div>}
-        {showPortal && <div style={{ position: 'absolute', left: portalX - 50, bottom: '40px', width: '100px', height: '180px', background: `radial-gradient(circle, ${worldData?.theme?.accent || 'cyan'} 0%, transparent 80%)`, borderRadius: '50%', boxShadow: `0 0 40px ${worldData?.theme?.accent || 'cyan'}`, display: 'flex', justifyContent: 'center', alignItems: 'center', color: 'white' }}>ENTER</div>}
-        <div style={{ left: isSuckingIn ? portalX : playerX, bottom: isSuckingIn ? '100px' : `${40 + playerY}px`, position: 'absolute', fontSize: '50px', transition: isSuckingIn ? 'all 0.8s ease-in' : 'transform 0.1s linear', transform: isSuckingIn ? 'rotate(1080deg) scale(0)' : `rotate(${velocityY.current * 2}deg)`, opacity: isSuckingIn ? 0 : 1 }}>🤖</div>
-      </div>
-      {isNearMob && levelData && (
-        <div style={{ position: 'fixed', bottom: 0, width: '100%', height: '40%', background: 'rgba(0,0,0,0.9)', padding: '20px', zIndex: 100, color: 'white', borderTop: '2px solid cyan' }}>
-          <h2>УРОВЕНЬ {currentLevel + 1}</h2>
-          <p>{levelData.task}</p>
-          <CodeEditor initialCode={levelData.code} solution={levelData.fix} onSuccess={() => { setIsNearMob(false); setShowPortal(true); }} />
+    <div className="transition-screen">
+      <div className="glitch-wrapper">
+        <div className="log-line">INITIALIZING NEURAL LINK... [OK]</div>
+        <div className="log-line">DECRYPTING SECTOR DATA... [OK]</div>
+        <div className="log-line">BYPASSING FIREWALL... [DONE]</div>
+        <h1 className="next-world-title">ВХІД У: {nextWorldName}</h1>
+        <div className="loading-bar-container">
+          <div className="loading-bar-fill"></div>
         </div>
-      )}
+      </div>
+    </div>
+  );
+};
+
+const Game = () => {
+  // СТАНИ ГРИ: intro, playing, transitioning, dead
+  const [gameState, setGameState] = useState('intro');
+  const [currentWorld, setCurrentWorld] = useState(0);
+  const [currentLevel, setCurrentLevel] = useState(0);
+  const [obstacles, setObstacles] = useState([]);
+  const [score, setScore] = useState(0);
+  const [timeLeft, setTimeLeft] = useState(0);
+  const [isNearMob, setIsNearMob] = useState(false);
+  const [showPortal, setShowPortal] = useState(false);
+  const [showTitle, setShowTitle] = useState(false);
+
+  // РЕФЕРИ ДЛЯ ФІЗИКИ
+  const playerRef = useRef({ x: 100, y: 0 });
+  const [renderPos, setRenderPos] = useState({ x: 100, y: 0 });
+  const velocity = useRef({ x: 0, y: 0 });
+  const keys = useRef({});
+  const timerInterval = useRef(null);
+
+  const worldData = worlds[currentWorld];
+  const levelData = worldData.levels[currentLevel];
+  
+  const mobX = 4000;
+  const portalX = 4600;
+
+  // ГЕНЕРАЦІЯ ПЕРЕШКОД
+  const generateObstacles = useCallback(() => {
+    const obs = [];
+    let last = 800;
+    for (let i = 0; i < worldData.config.obstacleCount; i++) {
+      last += Math.floor(Math.random() * (worldData.config.maxGap - worldData.config.minGap)) + worldData.config.minGap;
+      if (last < mobX - 300) obs.push(last);
+    }
+    setObstacles(obs);
+  }, [worldData.config, mobX]);
+
+  // СКИДАННЯ РІВНЯ
+  const resetLevel = useCallback(() => {
+    playerRef.current = { x: 100, y: 0 };
+    velocity.current = { x: 0, y: 0 };
+    setIsNearMob(false);
+    setShowPortal(false);
+    setTimeLeft(levelData?.time || 20);
+    generateObstacles();
+    setShowTitle(true);
+    const t = setTimeout(() => setShowTitle(false), 3000);
+    return () => clearTimeout(t);
+  }, [levelData, generateObstacles]);
+
+  useEffect(() => {
+    if (gameState === 'playing') resetLevel();
+  }, [currentWorld, currentLevel, gameState, resetLevel]);
+
+  // ЛОГІКА ПЕРЕХОДУ
+  const handleNextAction = useCallback(() => {
+    const isLastLevelInWorld = currentLevel >= worldData.levels.length - 1;
+    const isLastWorld = currentWorld >= worlds.length - 1;
+
+    if (isLastLevelInWorld && !isLastWorld) {
+      setGameState('transitioning');
+    } else if (!isLastLevelInWorld) {
+      setCurrentLevel(prev => prev + 1);
+    } else {
+      alert("🏆 ВІТАЮ! ГОЛОВНИЙ СЕРВЕР ПОВНІСТЮ ОЧИЩЕНО!");
+      window.location.reload();
+    }
+  }, [currentLevel, currentWorld, worldData.levels.length]);
+
+  // GAME LOOP (ФІЗИКА)
+  useEffect(() => {
+    if (gameState !== 'playing' || isNearMob) return;
+    
+    let frameId;
+    const update = () => {
+      const p = playerRef.current;
+      const v = velocity.current;
+
+      if (keys.current['d'] || keys.current['arrowright']) v.x = 11;
+      else if (keys.current['a'] || keys.current['arrowleft']) v.x = -11;
+      else v.x *= 0.8;
+
+      const isOnGround = p.y <= 0;
+      const onBrick = obstacles.some(ox => p.x + 50 > ox && p.x < ox + 70 && Math.abs(p.y - 70) < 10);
+
+      if ((keys.current['w'] || keys.current[' '] || keys.current['arrowup']) && (isOnGround || onBrick)) {
+        v.y = 17;
+      }
+
+      v.y -= 0.8; 
+      p.x += v.x;
+      p.y += v.y;
+
+      if (p.y < 0) { p.y = 0; v.y = 0; }
+      if (p.x < 0) p.x = 0;
+
+      // Зустріч з багом
+      if (Math.abs(p.x - mobX) < 100 && !showPortal) {
+        setIsNearMob(true);
+        v.x = 0;
+      }
+
+      // Вхід у портал
+      if (showPortal && p.x > portalX - 50) {
+        handleNextAction();
+      }
+
+      setRenderPos({ x: p.x, y: p.y });
+      frameId = requestAnimationFrame(update);
+    };
+
+    frameId = requestAnimationFrame(update);
+    return () => cancelAnimationFrame(frameId);
+  }, [gameState, isNearMob, obstacles, showPortal, handleNextAction]);
+
+  // ТАЙМЕР ДЛЯ ТЕРМІНАЛУ
+  useEffect(() => {
+    if (isNearMob && timeLeft > 0) {
+      timerInterval.current = setInterval(() => {
+        setTimeLeft(t => {
+          if (t <= 1) {
+            setGameState('dead');
+            return 0;
+          }
+          return t - 1;
+        });
+      }, 1000);
+    }
+    return () => clearInterval(timerInterval.current);
+  }, [isNearMob, timeLeft]);
+
+  // КЕРУВАННЯ КЛАВІАТУРОЮ
+  useEffect(() => {
+    const dn = (e) => { keys.current[e.key.toLowerCase()] = true; };
+    const up = (e) => { keys.current[e.key.toLowerCase()] = false; };
+    window.addEventListener('keydown', dn);
+    window.addEventListener('keyup', up);
+    return () => {
+      window.removeEventListener('keydown', dn);
+      window.removeEventListener('keyup', up);
+    };
+  }, []);
+
+  // ВІДОБРАЖЕННЯ ЕКРАНІВ
+  if (gameState === 'intro') return <Intro onStart={() => setGameState('playing')} />;
+  
+  if (gameState === 'transitioning') {
+    return (
+      <WorldTransition 
+        nextWorldName={worlds[currentWorld + 1]?.name} 
+        onComplete={() => {
+          setCurrentWorld(w => w + 1);
+          setCurrentLevel(0);
+          setGameState('playing');
+        }} 
+      />
+    );
+  }
+
+  if (gameState === 'dead') return (
+    <div className="death-screen">
+      <h1>[ SYSTEM CRASH ]</h1>
+      <p>ChaosCompiler виявив вашу присутність і видалив ядро.</p>
+      <button className="start-btn" onClick={() => window.location.reload()}>REBOOT SYSTEM</button>
+    </div>
+  );
+
+  return (
+    <div className={`game-screen ${isNearMob ? 'animate-shake' : ''}`} style={{ background: worldData.theme.bg }}>
+      {/* HUD ІНТЕРФЕЙС */}
+      <div className="game-hud">
+        <div className="hud-item">{worldData.name} | СЕКТОР {currentLevel + 1}</div>
+        <div className="hud-item">score: <span style={{color: worldData.theme.accent}}>{score}</span></div>
+        {isNearMob && <div className="hud-timer">ВІРУС АКТИВНИЙ: {timeLeft}s</div>}
+      </div>
+
+      {/* НАЗВА СВІТУ (АНОНС) */}
+      <div className={`world-title-overlay ${showTitle ? 'active' : ''}`}>
+        <h1 style={{ color: worldData.theme.accent }}>{worldData.name}</h1>
+      </div>
+
+      {/* ІГРОВИЙ СВІТ */}
+      <div className="world-layer" style={{ transform: `translateX(-${Math.max(0, renderPos.x - 400)}px)`, transition: 'none' }}>
+        <div className="ground-line" style={{ borderColor: worldData.theme.ground }} />
+        
+        {obstacles.map((pos, i) => (
+          <div key={`brick-${i}`} className="brick" style={{ left: pos }}>🧱</div>
+        ))}
+        
+        {!showPortal ? (
+          <div style={{ position: 'absolute', left: mobX, bottom: '40px' }}>
+            <MobDisplay image={levelData.enemy} />
+          </div>
+        ) : (
+          <div className="portal-wrapper" style={{ left: portalX, bottom: '40px' }}>
+             <div className="portal-ring" style={{ borderColor: worldData.theme.accent }} />
+             <div className="interact-hint">ПОРТАЛ ВІДКРИТО</div>
+          </div>
+        )}
+
+        {/* ГЕРОЙ */}
+        <div className="player-hero" style={{ left: renderPos.x, bottom: `${40 + renderPos.y}px`, transition: 'none' }}>🤖</div>
+      </div>
+
+      {/* ТЕРМІНАЛ ДЕБАГУ */}
+      <div className={`bottom-terminal ${isNearMob ? 'open' : ''}`}>
+        {isNearMob && levelData && (
+          <div className="terminal-inner">
+            <div className="terminal-header">
+              {`>>> ОБ'ЄКТ: ${levelData.enemy.replace('.png', '').toUpperCase()}`}
+            </div>
+            <div className="task-text">{levelData.task}</div>
+            <CodeEditor 
+              key={`${currentWorld}-${currentLevel}`} 
+              initialCode={levelData.code} 
+              solution={levelData.fix} 
+              onSuccess={() => {
+                setIsNearMob(false);
+                setShowPortal(true);
+                setScore(s => s + (timeLeft * 100));
+                clearInterval(timerInterval.current);
+              }} 
+            />
+          </div>
+        )}
+      </div>
     </div>
   );
 };

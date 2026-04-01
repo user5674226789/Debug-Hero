@@ -5,13 +5,12 @@
   --bg: #16171d;
   --border: #2e303a;
   --code-bg: #1f2028;
-  --accent: #c084fc;
-  --accent-bg: rgba(192, 132, 252, 0.15);
-  --accent-border: rgba(192, 132, 252, 0.5);
-  --social-bg: rgba(47, 48, 58, 0.5);
-  --shadow: rgba(0, 0, 0, 0.4) 0 10px 15px -3px, rgba(0, 0, 0, 0.25) 0 4px 6px -2px;
+  --accent: #00ff41; /* Змінено на основний колір хакера */
+  --accent-bg: rgba(0, 255, 65, 0.15);
+  --accent-border: rgba(0, 255, 65, 0.5);
+  --shadow: rgba(0, 0, 0, 0.4) 0 10px 15px -3px;
   --sans: system-ui, 'Segoe UI', Roboto, sans-serif;
-  --mono: ui-monospace, Consolas, monospace;
+  --mono: 'Courier New', ui-monospace, Consolas, monospace;
 }
 
 body {
@@ -19,10 +18,10 @@ body {
   background: var(--bg);
   color: var(--text);
   font-family: var(--sans);
-  overflow: hidden; /* Щоб не було скролбарів під час гри */
+  overflow: hidden;
 }
 
-/* --- ІГРОВИЙ ЕКРАН ТА СВІТ --- */
+/* --- ІГРОВИЙ ЕКРАН ТА КАМЕРА --- */
 .game-screen {
   width: 100vw;
   height: 100vh;
@@ -34,8 +33,8 @@ body {
 .world-layer {
   position: relative;
   height: 65%;
-  width: 5000px; /* Довжина рівня */
-  transition: transform 0.1s linear; /* Плавність камери */
+  width: 5000px;
+  transition: none; /* Фізика працює через requestAnimationFrame */
 }
 
 .ground-line {
@@ -44,343 +43,134 @@ body {
   width: 100%;
   height: 40px;
   background: #111;
-  border-top: 4px solid #00ff41;
+  border-top: 4px solid var(--accent);
   box-shadow: 0 -5px 15px rgba(0, 255, 65, 0.2);
 }
 
-/* --- ОБ'ЄКТИ: ГРАВЕЦЬ, ЦЕГЛА, МОБ --- */
-.brick {
-  position: absolute;
-  bottom: 40px;
-  width: 70px;  /* ПОВИННО збігатися з константою в JS */
-  height: 70px; /* ПОВИННО збігатися з константою в JS */
-  background: #222;
-  border: 2px solid #444;
-  box-shadow: inset 0 0 15px #000, 0 0 10px rgba(0,0,0,0.5);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
+/* --- ОБ'ЄКТИ ТА ГЕРОЙ --- */
 .player-hero {
   position: absolute;
-  font-size: 50px; /* Трохи менше, щоб вписувалось у 60px */
+  font-size: 50px;
   width: 60px;
   height: 60px;
   display: flex;
   justify-content: center;
   align-items: center;
   z-index: 10;
-  filter: drop-shadow(0 0 10px #00ff41);
-  /* transition додається в JS динамічно для стрибка */
+  filter: drop-shadow(0 0 10px var(--accent));
+  transition: none !important; /* Критично для плавності руху */
 }
 
-.mob-wrapper {
+.brick {
   position: absolute;
   bottom: 40px;
-  width: 65px;
-  height: 65px;
+  width: 70px;
+  height: 70px;
+  background: #222;
+  border: 2px solid #444;
+  box-shadow: inset 0 0 15px #000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* --- HUD ТА UI ГРИ --- */
+.game-hud {
+  position: absolute;
+  top: 0;
+  width: 100%;
+  display: flex;
+  justify-content: space-around;
+  padding: 15px;
+  background: rgba(0, 0, 0, 0.7);
+  z-index: 1000;
+  color: #fff;
+  font-family: var(--mono);
+}
+
+.hud-item span {
+  color: var(--accent);
+}
+
+.hud-timer {
+  background: #ff3e3e;
+  color: white;
+  padding: 5px 20px;
+  font-weight: bold;
+  animation: blink 0.5s infinite;
+}
+
+/* --- ПОРТАЛИ ТА ПЕРЕХОДИ --- */
+.portal-wrapper {
+  position: absolute;
   display: flex;
   flex-direction: column;
   align-items: center;
 }
 
-.mob-wrapper img {
-  width: 100%;
-  height: 100%;
-  object-fit: contain;
+.portal-ring {
+  width: 80px;
+  height: 130px;
+  border: 5px solid;
+  border-radius: 50%;
+  box-shadow: 0 0 30px;
+  animation: rotatePortal 2s infinite linear;
+}
+
+@keyframes rotatePortal {
+  from { transform: rotateY(0deg); }
+  to { transform: rotateY(360deg); }
+}
+
+.world-title-overlay {
+  position: absolute;
+  top: 45%; left: 50%;
+  transform: translate(-50%, -50%);
+  text-align: center;
+  opacity: 0;
+  pointer-events: none;
+  transition: all 1s ease;
+  z-index: 200;
+}
+
+.world-title-overlay.active {
+  opacity: 1;
+  transform: translate(-50%, -60%);
+}
+
+.world-title-overlay h1 {
+  font-size: 80px;
+  letter-spacing: 10px;
+  text-transform: uppercase;
 }
 
 /* --- ТЕРМІНАЛ ДЕБАГУ --- */
 .bottom-terminal {
-  position: absolute;
+  position: fixed;
   bottom: -100%;
   left: 0;
   width: 100%;
-  height: 35%;
-  background: rgba(0, 0, 0, 0.95);
-  border-top: 3px solid #00ff41;
-  transition: bottom 0.6s cubic-bezier(0.18, 0.89, 0.32, 1.28);
+  height: 40%;
+  background: #000;
+  border-top: 4px solid var(--accent);
+  transition: 0.5s cubic-bezier(0.18, 0.89, 0.32, 1.28);
+  z-index: 300;
   padding: 20px;
   box-sizing: border-box;
-  z-index: 100;
-  color: white;
 }
 
 .bottom-terminal.open {
   bottom: 0;
 }
 
-.status-red { color: #ff3e3e; font-weight: bold; margin-bottom: 5px; }
-.task-text { color: #ccc; font-size: 14px; margin-bottom: 15px; font-family: var(--mono); }
+.terminal-header {
+  color: #ff3e3e;
+  font-weight: bold;
+  margin-bottom: 10px;
+  font-family: var(--mono);
+}
 
 /* --- ЕФЕКТИ ТА АНІМАЦІЇ --- */
-@keyframes shake {
-  0% { transform: translate(1px, 1px) rotate(0deg); }
-  20% { transform: translate(-3px, 0px) rotate(1deg); }
-  40% { transform: translate(1px, -1px) rotate(1deg); }
-  60% { transform: translate(-3px, 1px) rotate(0deg); }
-  100% { transform: translate(1px, -2px) rotate(-1deg); }
-}
-
-.animate-shake {
-  animation: shake 0.5s infinite;
-}
-
-.interact-hint {
-  background: rgba(0, 0, 0, 0.8);
-  color: #00ff41;
-  padding: 4px 8px;
-  border-radius: 4px;
-  font-size: 10px;
-  margin-top: 5px;
-  white-space: nowrap;
-  border: 1px solid #00ff41;
-  animation: bounce 1s infinite;
-}
-
-@keyframes bounce {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-5px); }
-}
-
-/* --- СТИЛІ ІНТЕРФЕЙСУ (Vite Header/UI) --- */
-.counter {
-  font-family: var(--mono);
-  font-size: 16px;
-  padding: 5px 10px;
-  border-radius: 5px;
-  color: var(--accent);
-  background: var(--accent-bg);
-  border: 2px solid transparent;
-  transition: border-color 0.3s;
-  cursor: pointer;
-}
-
-.counter:hover { border-color: var(--accent-border); }
-
-.portal-effect {
-  position: absolute;
-  width: 100px;
-  height: 150px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-}
-
-.portal-core {
-  width: 70px;
-  height: 110px;
-  background: radial-gradient(circle, currentColor 0%, transparent 80%);
-  border: 5px solid;
-  border-radius: 50%;
-  box-shadow: 0 0 20px currentColor;
-  animation: portalOrbit 2s infinite linear;
-}
-
-@keyframes portalOrbit {
-  0% { transform: scale(1) rotate(0deg); opacity: 0.6; }
-  50% { transform: scale(1.1) rotate(180deg); opacity: 1; }
-  100% { transform: scale(1) rotate(360deg); opacity: 0.6; }
-}
-
-.player-hero {
-  transition: bottom 0.4s ease-out, left 0.1s linear;
-}
-
-/* Анонс світу при вході */
-.world-announcer {
-  position: absolute;
-  top: 40%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  text-align: center;
-  z-index: 200;
-  pointer-events: none;
-  opacity: 0;
-  transition: opacity 0.8s ease, transform 0.8s ease;
-}
-
-.world-announcer.visible {
-  opacity: 1;
-  transform: translate(-50%, -60%);
-}
-
-.world-announcer h1 {
-  font-size: 64px;
-  text-transform: uppercase;
-  letter-spacing: 10px;
-  margin: 0;
-  filter: drop-shadow(0 0 20px currentColor);
-}
-
-.world-announcer p {
-  color: #fff;
-  font-size: 24px;
-  letter-spacing: 5px;
-}
-
-/* Оновлений гравець (без transition для миттєвої реакції) */
-.player-hero {
-  position: absolute;
-  font-size: 50px;
-  width: 60px;
-  height: 60px;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  z-index: 10;
-  filter: drop-shadow(0 0 10px #00ff41);
-  /* transition видалено для фізики через requestAnimationFrame */
-}
-
-/* Статус-бар у кутку */
-.ui-top-bar {
-  position: absolute;
-  top: 20px;
-  left: 20px;
-  z-index: 150;
-  font-family: var(--mono);
-}
-
-/* Верхній інтерфейс */
-.ui-overlay {
-  position: absolute;
-  top: 20px;
-  left: 20px;
-  z-index: 100;
-  padding: 15px;
-  background: rgba(0, 0, 0, 0.8);
-  border-left: 4px solid;
-  font-family: 'Courier New', monospace;
-}
-.ui-world { font-size: 20px; font-weight: bold; color: #fff; }
-.ui-level { font-size: 14px; color: #aaa; margin: 5px 0; }
-.ui-status { font-size: 12px; color: #00ff41; text-transform: uppercase; }
-
-/* Анімація назви світу */
-.world-title-anim {
-  position: absolute;
-  top: 40%; left: 50%;
-  transform: translate(-50%, -50%) scale(0.8);
-  opacity: 0;
-  transition: all 1s cubic-bezier(0.19, 1, 0.22, 1);
-  pointer-events: none;
-  z-index: 200;
-}
-.world-title-anim.active {
-  opacity: 1;
-  transform: translate(-50%, -50%) scale(1);
-}
-.world-title-anim h1 {
-  font-size: 80px;
-  text-transform: uppercase;
-  letter-spacing: 15px;
-  filter: drop-shadow(0 0 30px currentColor);
-}
-
-/* Вимикаємо плавні переходи для фізики */
-.player-hero {
-  position: absolute;
-  font-size: 50px;
-  width: 60px; height: 60px;
-  display: flex; align-items: center; justify-content: center;
-  transition: none !important; /* ВАЖЛИВО: для Game Loop */
-}
-
-.portal-core {
-  width: 80px; height: 120px;
-  border: 4px solid; border-radius: 50%;
-  box-shadow: 0 0 20px;
-  animation: pPulse 1s infinite alternate;
-}
-@keyframes pPulse { from { opacity: 0.5; transform: scale(0.9); } to { opacity: 1; transform: scale(1.1); } }
-
-/* Інтерфейс */
-.game-hud {
-  position: absolute;
-  top: 20px; width: 100%;
-  display: flex; justify-content: space-around;
-  z-index: 100; font-family: monospace;
-}
-.hud-item {
-  background: rgba(0,0,0,0.8);
-  padding: 10px 20px; border-bottom: 3px solid #00ff41;
-  color: #fff;
-}
-.hud-item span { color: #00ff41; }
-.hud-timer {
-  background: #ff3e3e; color: white;
-  padding: 10px 30px; font-weight: bold;
-  animation: blink 0.5s infinite;
-}
-
-/* Назва світу */
-.world-title-overlay {
-  position: absolute;
-  top: 40%; left: 50%; transform: translate(-50%, -50%);
-  text-align: center; opacity: 0; pointer-events: none;
-  transition: all 1s ease; z-index: 200;
-}
-.world-title-overlay.active { opacity: 1; transform: translate(-50%, -60%); }
-.world-title-overlay h1 { font-size: 70px; letter-spacing: 15px; margin: 0; }
-
-/* Персонаж */
-.player-hero {
-  position: absolute; font-size: 50px;
-  width: 60px; height: 60px;
-  display: flex; align-items: center; justify-content: center;
-  transition: none !important;
-  filter: drop-shadow(0 0 10px #00ff41);
-}
-
-/* Портал */
-.portal-wrapper {
-  position: absolute; display: flex; flex-direction: column; align-items: center;
-}
-.portal-ring {
-  width: 80px; height: 130px;
-  border: 5px solid; border-radius: 50%;
-  box-shadow: 0 0 30px;
-  animation: rotatePortal 2s infinite linear;
-}
-@keyframes rotatePortal { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
-
-/* Термінал */
-.bottom-terminal {
-  position: fixed; bottom: -100%; left: 0; width: 100%;
-  height: 40%; background: #000; border-top: 4px solid #00ff41;
-  transition: 0.5s; z-index: 300; padding: 20px;
-}
-.bottom-terminal.open { bottom: 0; }
-.terminal-header { color: #ff3e3e; font-weight: bold; margin-bottom: 10px; }
-
-@keyframes blink { 50% { opacity: 0.3; } }
-
-.world-title-overlay {
-  position: absolute;
-  top: 45%; left: 50%; transform: translate(-50%, -50%);
-  text-align: center; opacity: 0; pointer-events: none;
-  transition: all 1s ease; z-index: 200; width: 100%;
-}
-.world-title-overlay.active { opacity: 1; transform: translate(-50%, -60%); }
-.world-title-overlay h1 { font-size: 80px; letter-spacing: 10px; margin: 0; text-transform: uppercase; }
-
-.enemy-tag {
-  position: absolute; top: -30px; white-space: nowrap;
-  font-family: monospace; border-radius: 4px;
-}
-
-.portal-ring {
-  width: 80px; height: 130px;
-  border: 5px solid; border-radius: 50%;
-  box-shadow: 0 0 30px;
-  animation: rotatePortal 2s infinite linear;
-}
-
-@keyframes rotatePortal { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
-
 .animate-shake {
   animation: shake 0.2s infinite;
 }
@@ -389,4 +179,274 @@ body {
   0% { transform: translate(1px, 1px); }
   50% { transform: translate(-1px, -1px); }
   100% { transform: translate(1px, -1px); }
+}
+
+@keyframes blink { 
+  50% { opacity: 0.3; } 
+}
+
+/* --- КІНЕМАТОГРАФІЧНЕ ІНТРО (CRT & GLITCH) --- */
+.intro-container {
+  height: 100vh;
+  background: radial-gradient(circle, #051a05 0%, #000000 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  overflow: hidden;
+  position: relative;
+}
+
+.crt-overlay::before {
+  content: " ";
+  display: block;
+  position: absolute;
+  top: 0; left: 0; bottom: 0; right: 0;
+  background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), 
+              linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 100, 0.06));
+  z-index: 10;
+  background-size: 100% 4px, 3px 100%;
+  pointer-events: none;
+}
+
+.terminal-border {
+  border: 2px solid var(--accent);
+  max-width: 850px;
+  width: 100%;
+  background: rgba(0, 10, 0, 0.85);
+  box-shadow: 0 0 30px rgba(0, 255, 65, 0.4);
+  position: relative;
+  z-index: 20;
+}
+
+.terminal-header-bar {
+  background: var(--accent);
+  color: #000;
+  padding: 5px 15px;
+  font-family: var(--mono);
+  font-weight: bold;
+}
+
+.intro-content {
+  padding: 40px;
+  text-align: center;
+  color: var(--accent);
+  font-family: var(--mono);
+}
+
+.glitch-text {
+  position: relative;
+  font-size: 28px;
+  text-shadow: 0 0 10px var(--accent);
+}
+
+.start-btn {
+  margin-top: 30px;
+  background: transparent;
+  border: 1px solid var(--accent);
+  color: var(--accent);
+  padding: 12px 30px;
+  font-family: inherit;
+  font-weight: bold;
+  cursor: pointer;
+  transition: 0.3s;
+}
+
+.start-btn:hover {
+  background: var(--accent);
+  color: #000;
+  box-shadow: 0 0 20px var(--accent);
+}
+
+/* --- ПЕРЕХІД МІЖ СВІТАМИ --- */
+.transition-screen {
+  height: 100vh;
+  background: #000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  color: var(--accent);
+  font-family: var(--mono);
+}
+
+.loading-bar-container {
+  width: 300px;
+  height: 4px;
+  background: #002200;
+  margin-top: 20px;
+}
+
+.loading-bar-fill {
+  width: 100%; height: 100%;
+  background: var(--accent);
+  animation: loadProgress 3s linear forwards;
+}
+
+@keyframes loadProgress {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(0); }
+}
+
+.death-screen {
+  height: 100vh;
+  background: #200;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  color: #f00;
+  font-family: var(--mono);
+}
+
+/* ============================================================
+   ФАЙЛ: App.css (ПОВНИЙ ТА НОРМАЛЬНИЙ)
+   ============================================================ */
+
+:root {
+  --text: #9ca3af;
+  --text-h: #f3f4f6;
+  --bg: #000; /* Глибокий чорний */
+  
+  /* Хакерський зелений */
+  --accent-green: #00ff41;
+  
+  /* Фіолетовий (як на скріншотах) */
+  --accent-purple: #c084fc; 
+  
+  --mono: 'Courier New', ui-monospace, Consolas, monospace;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--mono); /* За замовчуванням усюди моноширинний */
+  overflow: hidden;
+}
+
+/* ============================================================
+   1. СТИЛІ КІНЕМАТОГРАФІЧНОГО ІНТРО (CRT, GLITCH, ПУРПУР)
+   ============================================================ */
+
+.intro-container {
+  height: 100vh;
+  background: #000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  box-sizing: border-box;
+  overflow: hidden;
+  position: relative;
+  /* Легка віньєтка */
+  background: radial-gradient(circle, #0a0a0a 0%, #000000 100%);
+}
+
+/* CRT Оверлей */
+.crt-overlay::before {
+  content: " ";
+  display: block;
+  position: absolute;
+  top: 0; left: 0; bottom: 0; right: 0;
+  background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), 
+              linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 100, 0.06));
+  z-index: 10;
+  background-size: 100% 4px, 3px 100%;
+  pointer-events: none;
+  opacity: 0.5;
+}
+
+/* Рамка терміналу */
+.terminal-border {
+  border: 2px solid var(--accent-purple);
+  max-width: 850px;
+  width: 100%;
+  background: rgba(0, 10, 0, 0.85);
+  box-shadow: 0 0 30px rgba(0, 255, 65, 0.4);
+  position: relative;
+  z-index: 20;
+}
+
+/* Плашка заголовка (Фіолетова) */
+.terminal-header-bar {
+  background: var(--accent-purple);
+  color: #000;
+  padding: 8px 15px;
+  font-family: var(--mono);
+  font-weight: bold;
+  font-size: 14px;
+  text-align: left;
+}
+
+/* Внутрішній контент (Зелений) */
+.intro-content {
+  padding: 50px 30px;
+  text-align: center;
+  color: var(--accent-green); /* Внутрішній текст зелений */
+  font-family: var(--mono);
+}
+
+/* Текст та Акценти */
+.intro-content h2 {
+  font-size: 24px;
+  margin-bottom: 25px;
+  text-transform: uppercase;
+}
+
+.intro-content p {
+  margin: 15px 0;
+  line-height: 1.6;
+  font-size: 16px;
+}
+
+.highlight-red {
+  color: #ff3333;
+  font-weight: bold;
+}
+
+/* Фінальний рядок (миготіння курсору) */
+.blink-text {
+  margin-top: 30px;
+  font-size: 20px;
+  font-weight: bold;
+  animation: blink 1.2s infinite;
+}
+
+@keyframes blink { 50% { opacity: 0; } }
+
+/* Кнопка */
+.start-btn {
+  margin-top: 40px;
+  background: transparent;
+  border: 1px solid var(--accent-purple);
+  color: var(--accent-purple);
+  padding: 12px 30px;
+  font-family: inherit;
+  font-weight: bold;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  z-index: 30;
+  position: relative;
+}
+
+.start-btn:hover {
+  background: var(--accent-purple);
+  color: #000;
+  box-shadow: 0 0 20px var(--accent-purple);
+}
+
+/* Плавна поява кнопки гри */
+.animate-fadeIn {
+  animation: fadeIn 1s ease-out;
+}
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(15px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Мобільна адаптація */
+@media (max-width: 600px) {
+  .intro-content { padding: 30px 15px; }
+  .intro-content p { font-size: 14px; }
 }
