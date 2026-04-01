@@ -1,66 +1,81 @@
 import React, { useState, useEffect } from 'react';
 import { worlds } from './data/gameConfig';
-import CodeEditor from './CodeEditor'; // файли в одній папці
+import CodeEditor from './CodeEditor';
 import MobDisplay from './MobDisplay';
 
 const Game = () => {
-  const [currentWorldIdx, setCurrentWorldIdx] = useState(0);
-  const [currentLevelIdx, setCurrentLevelIdx] = useState(0);
-  const [score, setScore] = useState(0);
-  const [timeLeft, setTimeLeft] = useState(45); // Трохи більше часу на старт
+  const [currentLevel, setCurrentLevel] = useState(0);
+  const [playerPos, setPlayerPos] = useState({ x: 50, y: 80 }); // Позиція у %
+  const [isNearMob, setIsNearMob] = useState(false);
+  
+  const levelData = worlds[0].levels[currentLevel];
+  const mobPos = { x: 80, y: 75 }; // Фіксована позиція моба на рівні
 
-  const currentWorld = worlds[currentWorldIdx];
-  const currentLevel = currentWorld.levels[currentLevelIdx];
-
+  // Логіка руху
   useEffect(() => {
-    if (timeLeft > 0) {
-      const timer = setTimeout(() => setTimeLeft(timeLeft - 1), 1000);
-      return () => clearTimeout(timer);
-    }
-  }, [timeLeft]);
+    const handleMove = (e) => {
+      setPlayerPos(prev => {
+        let newX = prev.x;
+        let newY = prev.y;
+        const speed = 2;
 
-  const handleLevelComplete = () => {
-    setScore(prev => prev + 100 + (timeLeft * 2));
-    setTimeLeft(45);
+        if (e.key === 'ArrowLeft' || e.key === 'a') newX -= speed;
+        if (e.key === 'ArrowRight' || e.key === 'd') newX += speed;
+        if (e.key === 'ArrowUp' || e.key === 'w') newY -= speed;
+        if (e.key === 'ArrowDown' || e.key === 's') newY += speed;
 
-    if (currentLevelIdx < currentWorld.levels.length - 1) {
-      setCurrentLevelIdx(currentLevelIdx + 1);
-    } else if (currentWorldIdx < worlds.length - 1) {
-      alert(`Світ ${currentWorld.name} пройдено!`);
-      setCurrentWorldIdx(currentWorldIdx + 1);
-      setCurrentLevelIdx(0);
-    } else {
-      alert("ВІТАЄМО! ChaosCompiler видалено назавжди!");
-    }
-  };
+        // Обмеження поля
+        newX = Math.max(5, Math.min(90, newX));
+        newY = Math.max(20, Math.min(90, newY));
+
+        // Перевірка дистанції до моба
+        const dist = Math.sqrt(Math.pow(newX - mobPos.x, 2) + Math.pow(newY - mobPos.y, 2));
+        setIsNearMob(dist < 15);
+
+        return { x: newX, y: newY };
+      });
+    };
+
+    window.addEventListener('keydown', handleMove);
+    return () => window.removeEventListener('keydown', handleMove);
+  }, []);
 
   return (
-    <div className="min-h-screen bg-black text-green-500 font-mono p-6">
-      <div className="max-w-5xl mx-auto border border-green-900 p-4 rounded-lg bg-zinc-950">
-        <div className="flex justify-between mb-6 text-xl border-b border-green-900 pb-2">
-          <span>HOST: {currentWorld.name}</span>
-          <span className={timeLeft < 10 ? "text-red-500 animate-pulse" : ""}>TIME: {timeLeft}s</span>
-          <span>XP: {score}</span>
+    <div className="game-container">
+      <div className="game-world">
+        {/* Гравець */}
+        <div 
+          className="player" 
+          style={{ left: `${playerPos.x}%`, top: `${playerPos.y}%` }}
+        >
+          <div className="player-sprite">🤖</div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-          <div className="flex flex-col items-center justify-center bg-zinc-900 p-6 rounded-lg border border-zinc-800">
-            <MobDisplay image={currentLevel.mob} isBoss={currentLevel.difficulty === "Hard"} />
-            <div className="mt-6 text-center">
-              <h3 className="text-red-400 font-bold mb-2">TARGET DETECTED: {currentLevel.difficulty}</h3>
-              <p className="text-sm text-gray-300 italic">{currentLevel.task}</p>
-            </div>
-          </div>
-
-          <div className="flex flex-col">
-            <div className="text-xs text-green-800 mb-1 ml-1"># DEBUG_HERO_COMPILER_V1.0</div>
-            <CodeEditor 
-              initialCode={currentLevel.code} 
-              solution={currentLevel.fix} 
-              onSuccess={handleLevelComplete} 
-            />
-          </div>
+        {/* Моб */}
+        <div 
+          className="mob-container" 
+          style={{ left: `${mobPos.x}%`, top: `${mobPos.y}%` }}
+        >
+          <MobDisplay image={levelData.mob} />
+          {isNearMob && <div className="interact-hint font-mono">PRESS [ENTER] TO DEBUG</div>}
         </div>
+      </div>
+
+      {/* Редактор з'являється тільки якщо підійшов близько */}
+      <div className={`editor-side ${!isNearMob ? 'opacity-20 pointer-events-none' : ''}`}>
+        <div className="task-card">
+          <h3 className="text-green-500 font-bold">TARGET DETECTED: {levelData.difficulty}</h3>
+          <p className="text-sm italic text-zinc-400">{levelData.task}</p>
+        </div>
+        <CodeEditor 
+          key={currentLevel}
+          initialCode={levelData.code}
+          solution={levelData.fix}
+          onSuccess={() => {
+            setCurrentLevel(prev => prev + 1);
+            setIsNearMob(false);
+          }}
+        />
       </div>
     </div>
   );

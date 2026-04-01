@@ -1,51 +1,45 @@
 import React, { useState, useEffect } from 'react';
 
 const CodeEditor = ({ initialCode, solution, onSuccess }) => {
-  const [userCode, setUserCode] = useState(initialCode);
+  // ПЕРШИМ ділом оголошуємо стейт
+  const [userInput, setUserInput] = useState(initialCode);
 
-  // Оновлюємо код, коли змінюється рівень
   useEffect(() => {
-    setUserCode(initialCode);
+    setUserInput(initialCode);
   }, [initialCode]);
 
   const checkCode = () => {
-    // Проста перевірка: чи містить код гравця правильне виправлення?
-    // Можна зробити складніше через регулярні вирази
-    if (userCode.includes(solution)) {
+    if (userInput.replace(/\s+/g, '') === solution.replace(/\s+/g, '')) {
       onSuccess();
     } else {
-      alert("Помилка не виправлена! Спробуй ще раз.");
+      alert("❌ Код все ще містить помилку!");
     }
   };
 
-  // Додай цей useEffect всередину компонента CodeEditor
-useEffect(() => {
-  const handleKeyDown = (e) => {
-    if (e.ctrlKey && e.key === 'Enter') {
-      checkCode();
-    }
-  };
-  window.addEventListener('keydown', handleKeyDown);
-  return () => window.removeEventListener('keydown', handleKeyDown);
-}, [userInput]);
+  // Тільки ПІСЛЯ оголошення стейту додаємо слухач подій
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.ctrlKey && e.key === 'Enter') {
+        checkCode();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [userInput]); 
 
   return (
-    <div className="flex flex-col gap-4 bg-gray-800 p-4 rounded-lg border border-blue-500">
+    <div className="bg-zinc-900 p-4 rounded-lg border border-green-500/30">
       <textarea
-        className="w-full h-48 p-3 bg-black text-green-400 font-mono focus:outline-none"
-        value={userCode}
-        onChange={(e) => setUserCode(e.target.value)}
+        className="w-full h-48 bg-transparent text-green-400 font-mono focus:outline-none resize-none text-sm"
+        value={userInput}
+        onChange={(e) => setUserInput(e.target.value)}
+        spellCheck="false"
       />
-      <button 
-        onClick={checkCode}
-        className="bg-blue-600 hover:bg-blue-500 text-white font-bold py-2 px-4 rounded transition-all"
-      >
-        ЗАПУСТИТИ ДЕБАГ 🚀
+      <button onClick={checkCode} className="mt-4 w-full bg-green-600 py-2 rounded font-bold text-black">
+        ЗАПУСТИТИ ДЕБАГ (Ctrl+Enter)
       </button>
     </div>
   );
 };
-
-
 
 export default CodeEditor;
