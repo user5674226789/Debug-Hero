@@ -296,3 +296,97 @@ body {
   animation: pPulse 1s infinite alternate;
 }
 @keyframes pPulse { from { opacity: 0.5; transform: scale(0.9); } to { opacity: 1; transform: scale(1.1); } }
+
+/* Інтерфейс */
+.game-hud {
+  position: absolute;
+  top: 20px; width: 100%;
+  display: flex; justify-content: space-around;
+  z-index: 100; font-family: monospace;
+}
+.hud-item {
+  background: rgba(0,0,0,0.8);
+  padding: 10px 20px; border-bottom: 3px solid #00ff41;
+  color: #fff;
+}
+.hud-item span { color: #00ff41; }
+.hud-timer {
+  background: #ff3e3e; color: white;
+  padding: 10px 30px; font-weight: bold;
+  animation: blink 0.5s infinite;
+}
+
+/* Назва світу */
+.world-title-overlay {
+  position: absolute;
+  top: 40%; left: 50%; transform: translate(-50%, -50%);
+  text-align: center; opacity: 0; pointer-events: none;
+  transition: all 1s ease; z-index: 200;
+}
+.world-title-overlay.active { opacity: 1; transform: translate(-50%, -60%); }
+.world-title-overlay h1 { font-size: 70px; letter-spacing: 15px; margin: 0; }
+
+/* Персонаж */
+.player-hero {
+  position: absolute; font-size: 50px;
+  width: 60px; height: 60px;
+  display: flex; align-items: center; justify-content: center;
+  transition: none !important;
+  filter: drop-shadow(0 0 10px #00ff41);
+}
+
+/* Портал */
+.portal-wrapper {
+  position: absolute; display: flex; flex-direction: column; align-items: center;
+}
+.portal-ring {
+  width: 80px; height: 130px;
+  border: 5px solid; border-radius: 50%;
+  box-shadow: 0 0 30px;
+  animation: rotatePortal 2s infinite linear;
+}
+@keyframes rotatePortal { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+
+/* Термінал */
+.bottom-terminal {
+  position: fixed; bottom: -100%; left: 0; width: 100%;
+  height: 40%; background: #000; border-top: 4px solid #00ff41;
+  transition: 0.5s; z-index: 300; padding: 20px;
+}
+.bottom-terminal.open { bottom: 0; }
+.terminal-header { color: #ff3e3e; font-weight: bold; margin-bottom: 10px; }
+
+@keyframes blink { 50% { opacity: 0.3; } }
+
+.world-title-overlay {
+  position: absolute;
+  top: 45%; left: 50%; transform: translate(-50%, -50%);
+  text-align: center; opacity: 0; pointer-events: none;
+  transition: all 1s ease; z-index: 200; width: 100%;
+}
+.world-title-overlay.active { opacity: 1; transform: translate(-50%, -60%); }
+.world-title-overlay h1 { font-size: 80px; letter-spacing: 10px; margin: 0; text-transform: uppercase; }
+
+.enemy-tag {
+  position: absolute; top: -30px; white-space: nowrap;
+  font-family: monospace; border-radius: 4px;
+}
+
+.portal-ring {
+  width: 80px; height: 130px;
+  border: 5px solid; border-radius: 50%;
+  box-shadow: 0 0 30px;
+  animation: rotatePortal 2s infinite linear;
+}
+
+@keyframes rotatePortal { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+
+.animate-shake {
+  animation: shake 0.2s infinite;
+}
+
+@keyframes shake {
+  0% { transform: translate(1px, 1px); }
+  50% { transform: translate(-1px, -1px); }
+  100% { transform: translate(1px, -1px); }
+}

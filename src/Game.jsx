@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { worlds } from './data/gameConfig';
-import CodeEditor from './CodeEditor';
-import MobDisplay from './MobDisplay';
+import CodeEditor from './CodeEditor'; 
 
 const Game = () => {
   if (!worlds || !worlds[0] || !worlds[0].levels) {
@@ -14,6 +13,7 @@ const Game = () => {
 
   const [currentWorld, setCurrentWorld] = useState(0);
   const [currentLevel, setCurrentLevel] = useState(0);
+  HEAD
   const [playerX, setPlayerX] = useState(100);
   const [playerY, setPlayerY] = useState(0);
   const [isNearMob, setIsNearMob] = useState(false);
@@ -173,150 +173,150 @@ const Game = () => {
     };
   }, []);
 
-  return (
+return (
+  <div
+    className="game-screen"
+    style={{
+      background: worldData?.theme?.bg || '#1a1a1a',
+      width: '100vw',
+      height: '100vh',
+      overflow: 'hidden',
+      position: 'relative'
+    }}
+  >
+    {/* название мира */}
     <div
-      className="game-screen"
       style={{
-        background: worldData?.theme?.bg || '#1a1a1a',
-        width: '100vw',
-        height: '100vh',
-        overflow: 'hidden',
+        position: 'absolute',
+        top: '30%',
+        left: '50%',
+        transform: 'translate(-50%, -50%)',
+        opacity: showWorldTitle ? 1 : 0,
+        transition: 'opacity 1s',
+        zIndex: 10,
+        pointerEvents: 'none',
+        color: worldData?.theme?.accent || 'cyan',
+        fontSize: '3.5rem',
+        fontWeight: 'bold'
+      }}
+    >
+      {worldData?.name}
+    </div>
+
+    <div
+      className="world-layer"
+      style={{
+        transform: `translateX(-${Math.max(0, cameraX)}px)`,
+        width: '5000px',
+        height: '100%',
         position: 'relative'
       }}
     >
-      {/* название мира */}
+      {/* земля */}
       <div
         style={{
           position: 'absolute',
-          top: '30%',
-          left: '50%',
-          transform: 'translate(-50%, -50%)',
-          opacity: showWorldTitle ? 1 : 0,
-          transition: 'opacity 1s',
-          zIndex: 10,
-          pointerEvents: 'none',
-          color: worldData?.theme?.accent || 'cyan',
-          fontSize: '3.5rem',
-          fontWeight: 'bold'
+          bottom: '40px',
+          width: '100%',
+          height: '2px',
+          background: 'white',
+          opacity: 0.1
         }}
-      >
-        {worldData?.name}
-      </div>
+      />
 
-      <div
-        className="world-layer"
-        style={{
-          transform: `translateX(-${Math.max(0, cameraX)}px)`,
-          width: '5000px',
-          height: '100%',
-          position: 'relative'
-        }}
-      >
-        {/* земля */}
-        <div
-          style={{
-            position: 'absolute',
-            bottom: '40px',
-            width: '100%',
-            height: '2px',
-            background: 'white',
-            opacity: 0.1
-          }}
-        />
-
-        {/* моб */}
-        {!showPortal && (
-          <div style={{ position: 'absolute', left: mobX, bottom: '40px' }}>
-            <MobDisplay image={levelData?.mob} />
-          </div>
-        )}
-
-        {/* портал */}
-        {showPortal && (
-          <div
-            style={{
-              position: 'absolute',
-              left: portalX,
-              bottom: '40px',
-              width: '120px',
-              height: '200px',
-              background: `radial-gradient(ellipse, ${worldData?.theme?.accent || 'cyan'} 0%, transparent 80%)`,
-              borderRadius: '50%',
-              boxShadow: `0 0 40px ${worldData?.theme?.accent || 'cyan'}`,
-              display: 'flex',
-              justifyContent: 'center',
-              alignItems: 'center'
-            }}
-          >
-            <div style={{ color: 'white', fontSize: '18px', animation: 'pulse 1.5s infinite' }}>
-              ENTER
-            </div>
-          </div>
-        )}
-
-        {/* игрок */}
-        <div
-          style={{
-            left: isSuckingIn ? portalX + 35 : playerX,
-            bottom: isSuckingIn ? '120px' : `${40 + playerY}px`,
-            position: 'absolute',
-            fontSize: '50px',
-            transition: isSuckingIn ? 'all 0.8s ease-in' : 'transform 0.1s linear',
-            transform: isSuckingIn
-              ? 'rotate(1080deg) scale(0)'
-              : `rotate(${velocityY.current * 2}deg)`,
-            opacity: isSuckingIn ? 0 : 1
-          }}
-        >
-          🤖
-        </div>
-      </div>
-
-      {/* терминал */}
-      {isNearMob && levelData && (
-        <div
-          style={{
-            position: 'fixed',
-            bottom: 0,
-            width: '100%',
-            height: '45%',
-            background: 'rgba(0,0,0,0.95)',
-            borderTop: `2px solid ${worldData?.theme?.accent || 'cyan'}`,
-            padding: '20px',
-            color: '#fff',
-            zIndex: 100
-          }}
-        >
-          <h2 style={{ color: worldData?.theme?.accent || 'cyan' }}>
-            LEVEL {currentLevel + 1}
-          </h2>
-
-          <p>{levelData.task}</p>
-
-          <CodeEditor
-            key={`${currentWorld}-${currentLevel}`}
-            initialCode={levelData.code}
-            solution={levelData.fix}
-            onSuccess={() => {
-              setIsNearMob(false);
-              isNearMobRef.current = false;
-
-              setShowPortal(true);
-              showPortalRef.current = true;
-            }}
-          />
+      {/* моб */}
+      {!showPortal && (
+        <div style={{ position: 'absolute', left: mobX, bottom: '40px' }}>
+          <MobDisplay image={levelData?.mob} />
         </div>
       )}
 
-      <style>{`
-        @keyframes pulse {
-          0% { transform: scale(1); opacity: 0.8; }
-          50% { transform: scale(1.1); opacity: 1; }
-          100% { transform: scale(1); opacity: 0.8; }
-        }
-      `}</style>
+      {/* портал */}
+      {showPortal && (
+        <div
+          style={{
+            position: 'absolute',
+            left: portalX,
+            bottom: '40px',
+            width: '120px',
+            height: '200px',
+            background: `radial-gradient(ellipse, ${worldData?.theme?.accent || 'cyan'} 0%, transparent 80%)`,
+            borderRadius: '50%',
+            boxShadow: `0 0 40px ${worldData?.theme?.accent || 'cyan'}`,
+            display: 'flex',
+            justifyContent: 'center',
+            alignItems: 'center'
+          }}
+        >
+          <div style={{ color: 'white', fontSize: '18px', animation: 'pulse 1.5s infinite' }}>
+            ENTER
+          </div>
+        </div>
+      )}
+
+      {/* игрок */}
+      <div
+        style={{
+          left: isSuckingIn ? portalX + 35 : playerX,
+          bottom: isSuckingIn ? '120px' : `${40 + playerY}px`,
+          position: 'absolute',
+          fontSize: '50px',
+          transition: isSuckingIn ? 'all 0.8s ease-in' : 'transform 0.1s linear',
+          transform: isSuckingIn
+            ? 'rotate(1080deg) scale(0)'
+            : `rotate(${velocityY.current * 2}deg)`,
+          opacity: isSuckingIn ? 0 : 1
+        }}
+      >
+        🤖
+      </div>
     </div>
-  );
+
+    {/* терминал */}
+    {isNearMob && levelData && (
+      <div
+        style={{
+          position: 'fixed',
+          bottom: 0,
+          width: '100%',
+          height: '45%',
+          background: 'rgba(0,0,0,0.95)',
+          borderTop: `2px solid ${worldData?.theme?.accent || 'cyan'}`,
+          padding: '20px',
+          color: '#fff',
+          zIndex: 100
+        }}
+      >
+        <h2 style={{ color: worldData?.theme?.accent || 'cyan' }}>
+          LEVEL {currentLevel + 1}
+        </h2>
+
+        <p>{levelData.task}</p>
+
+        <CodeEditor
+          key={`${currentWorld}-${currentLevel}`}
+          initialCode={levelData.code}
+          solution={levelData.fix}
+          onSuccess={() => {
+            setIsNearMob(false);
+            isNearMobRef.current = false;
+
+            setShowPortal(true);
+            showPortalRef.current = true;
+          }}
+        />
+      </div>
+    )}
+
+    <style>{`
+      @keyframes pulse {
+        0% { transform: scale(1); opacity: 0.8; }
+        50% { transform: scale(1.1); opacity: 1; }
+        100% { transform: scale(1); opacity: 0.8; }
+      }
+    `}</style>
+  </div>
+);
 };
 
 export default Game;
