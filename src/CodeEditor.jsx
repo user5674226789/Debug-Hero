@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 
 const CodeEditor = ({ initialCode, solution, onSuccess }) => {
-  // ПЕРШИМ ділом оголошуємо стейт
   const [userInput, setUserInput] = useState(initialCode);
 
   useEffect(() => {
@@ -9,34 +8,27 @@ const CodeEditor = ({ initialCode, solution, onSuccess }) => {
   }, [initialCode]);
 
   const checkCode = () => {
-    if (userInput.replace(/\s+/g, '') === solution.replace(/\s+/g, '')) {
+    // Очищаємо пробіли для точної перевірки
+    const cleanInput = userInput.replace(/\s+/g, '');
+    const cleanSolution = solution.replace(/\s+/g, '');
+
+    // Перевіряємо, чи виправив користувач потрібну ділянку
+    if (cleanInput.includes(cleanSolution) && !cleanInput.includes("i--")) {
       onSuccess();
     } else {
-      alert("❌ Код все ще містить помилку!");
+      alert("❌ Помилка! Знайди i-- та заміни на i++");
     }
   };
 
-  // Тільки ПІСЛЯ оголошення стейту додаємо слухач подій
-  useEffect(() => {
-    const handleKeyDown = (e) => {
-      if (e.ctrlKey && e.key === 'Enter') {
-        checkCode();
-      }
-    };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [userInput]); 
-
   return (
-    <div className="bg-zinc-900 p-4 rounded-lg border border-green-500/30">
+    <div className="code-editor-box">
       <textarea
-        className="w-full h-48 bg-transparent text-green-400 font-mono focus:outline-none resize-none text-sm"
+        className="w-full h-32 bg-black text-green-400 p-2 font-mono border border-green-900"
         value={userInput}
         onChange={(e) => setUserInput(e.target.value)}
-        spellCheck="false"
       />
-      <button onClick={checkCode} className="mt-4 w-full bg-green-600 py-2 rounded font-bold text-black">
-        ЗАПУСТИТИ ДЕБАГ (Ctrl+Enter)
+      <button onClick={checkCode} className="mt-2 bg-green-600 px-4 py-2 text-black font-bold">
+        RUN DEBUG
       </button>
     </div>
   );

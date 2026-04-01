@@ -1,12 +1,20 @@
 import React from 'react';
 
-const MobDisplay = ({ image }) => {
-  const getImageUrl = (name) => {
-    return new URL(`./assets/${name}`, import.meta.url).href;
-  };
+// Функція для отримання правильного шляху в Vite
+const getImageUrl = (name) => {
+  return new URL(`./assets/${name}`, import.meta.url).href;
+};
 
+const MobDisplay = ({ image }) => {
   return (
-    <img src={getImageUrl(image)} alt="Target" className="mob-sprite" />
+    <div className="mob-container animate-shake">
+      <img 
+        src={getImageUrl(image)} 
+        alt="Bug" 
+        style={{ width: '80px', height: '80px', objectFit: 'contain' }}
+      />
+      <div className="interact-hint">FIX THE CODE!</div>
+    </div>
   );
 };
 
