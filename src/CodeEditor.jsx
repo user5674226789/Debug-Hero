@@ -1,34 +1,33 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 
 const CodeEditor = ({ initialCode, solution, onSuccess }) => {
-  const [userInput, setUserInput] = useState(initialCode);
-
-  useEffect(() => {
-    setUserInput(initialCode);
-  }, [initialCode]);
+  const [value, setValue] = useState(initialCode);
 
   const checkCode = () => {
-    // Очищаємо пробіли для точної перевірки
-    const cleanInput = userInput.replace(/\s+/g, '');
-    const cleanSolution = solution.replace(/\s+/g, '');
-
-    // Перевіряємо, чи виправив користувач потрібну ділянку
-    if (cleanInput.includes(cleanSolution) && !cleanInput.includes("i--")) {
+    if (value.includes(solution)) {
       onSuccess();
     } else {
-      alert("❌ Помилка! Знайди i-- та заміни на i++");
+      alert("Помилка! Код все ще не працює.");
+    }
+  };
+
+  const handleKeyDown = (e) => {
+    if (e.ctrlKey && e.key === 'Enter') {
+      checkCode();
     }
   };
 
   return (
-    <div className="code-editor-box">
+    <div className="editor-container">
       <textarea
-        className="w-full h-32 bg-black text-green-400 p-2 font-mono border border-green-900"
-        value={userInput}
-        onChange={(e) => setUserInput(e.target.value)}
+        className="code-input"
+        value={value}
+        onChange={(e) => setValue(e.target.value)}
+        onKeyDown={handleKeyDown}
+        spellCheck="false"
       />
-      <button onClick={checkCode} className="mt-2 bg-green-600 px-4 py-2 text-black font-bold">
-        RUN DEBUG
+      <button className="debug-btn" onClick={checkCode}>
+        ЗАПУСТИТИ ДЕБАГ (Ctrl+Enter)
       </button>
     </div>
   );
