@@ -18,6 +18,17 @@ const CodeEditor = ({ initialCode, solution, onSuccess }) => {
     }
   };
 
+  // Додай цей useEffect всередину компонента CodeEditor
+useEffect(() => {
+  const handleKeyDown = (e) => {
+    if (e.ctrlKey && e.key === 'Enter') {
+      checkCode();
+    }
+  };
+  window.addEventListener('keydown', handleKeyDown);
+  return () => window.removeEventListener('keydown', handleKeyDown);
+}, [userInput]);
+
   return (
     <div className="flex flex-col gap-4 bg-gray-800 p-4 rounded-lg border border-blue-500">
       <textarea
@@ -34,5 +45,7 @@ const CodeEditor = ({ initialCode, solution, onSuccess }) => {
     </div>
   );
 };
+
+
 
 export default CodeEditor;
