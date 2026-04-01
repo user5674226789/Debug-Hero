@@ -5,77 +5,89 @@ import MobDisplay from './MobDisplay';
 
 const Game = () => {
   const [currentLevel, setCurrentLevel] = useState(0);
-  const [playerPos, setPlayerPos] = useState({ x: 50, y: 80 }); // Позиція у %
+  const [playerX, setPlayerX] = useState(100);
+  const [playerY, setPlayerY] = useState(0);
+  const [isJumping, setIsJumping] = useState(false);
   const [isNearMob, setIsNearMob] = useState(false);
   
   const levelData = worlds[0].levels[currentLevel];
-  const mobPos = { x: 80, y: 75 }; // Фіксована позиція моба на рівні
+  const mobX = 1400; // Позиція моба в кінці рівня
 
-  // Логіка руху
+  // Камера: зміщуємо світ, щоб гравець був лівіше центру
+  const cameraX = Math.max(0, playerX - 200);
+
   useEffect(() => {
-    const handleMove = (e) => {
-      setPlayerPos(prev => {
-        let newX = prev.x;
-        let newY = prev.y;
-        const speed = 2;
-
-        if (e.key === 'ArrowLeft' || e.key === 'a') newX -= speed;
-        if (e.key === 'ArrowRight' || e.key === 'd') newX += speed;
-        if (e.key === 'ArrowUp' || e.key === 'w') newY -= speed;
-        if (e.key === 'ArrowDown' || e.key === 's') newY += speed;
-
-        // Обмеження поля
-        newX = Math.max(5, Math.min(90, newX));
-        newY = Math.max(20, Math.min(90, newY));
-
-        // Перевірка дистанції до моба
-        const dist = Math.sqrt(Math.pow(newX - mobPos.x, 2) + Math.pow(newY - mobPos.y, 2));
-        setIsNearMob(dist < 15);
-
-        return { x: newX, y: newY };
-      });
+    const handleKeys = (e) => {
+      if (e.key === 'd' || e.key === 'ArrowRight') setPlayerX(prev => prev + 25);
+      if (e.key === 'a' || e.key === 'ArrowLeft') setPlayerX(prev => Math.max(0, prev - 25));
+      if ((e.key === 'w' || e.key === ' ') && !isJumping) {
+        setIsJumping(true);
+        setPlayerY(160); // Висота стрибка
+        setTimeout(() => setPlayerY(0), 400);
+        setTimeout(() => setIsJumping(false), 800);
+      }
     };
 
-    window.addEventListener('keydown', handleMove);
-    return () => window.removeEventListener('keydown', handleMove);
-  }, []);
+    window.addEventListener('keydown', handleKeys);
+    return () => window.removeEventListener('keydown', handleKeys);
+  }, [isJumping]);
+
+  useEffect(() => {
+    // Перевірка наближення до моба
+    const dist = Math.abs(playerX - mobX);
+    if (dist < 150) setIsNearMob(true);
+    else setIsNearMob(false);
+  }, [playerX]);
+
+  const handleWin = () => {
+    if (currentLevel < worlds[0].levels.length - 1) {
+      setCurrentLevel(prev => prev + 1);
+      setPlayerX(100);
+      setIsNearMob(false);
+    } else {
+      alert("ГРУ ПРОЙДЕНО! ТИ МАЙСТЕР ДЕБАГУ!");
+    }
+  };
 
   return (
-    <div className="game-container">
-      <div className="game-world">
-        {/* Гравець */}
-        <div 
-          className="player" 
-          style={{ left: `${playerPos.x}%`, top: `${playerPos.y}%` }}
-        >
-          <div className="player-sprite">🤖</div>
+    <div className="game-screen" style={{ background: levelData.bg }}>
+      <div className="world-layer" style={{ transform: `translateX(-${cameraX}px)` }}>
+        <div className="ground-line"></div>
+        
+        {/* Перешкоди */}
+        {levelData.obstacles.map((pos, i) => (
+          <div key={i} className="brick" style={{ left: pos }}></div>
+        ))}
+
+        {/* Моб розміром з гравця */}
+        <div className="mob-wrapper" style={{ left: mobX }}>
+          <MobDisplay image={levelData.mob} />
         </div>
 
-        {/* Моб */}
-        <div 
-          className="mob-container" 
-          style={{ left: `${mobPos.x}%`, top: `${mobPos.y}%` }}
-        >
-          <MobDisplay image={levelData.mob} />
-          {isNearMob && <div className="interact-hint font-mono">PRESS [ENTER] TO DEBUG</div>}
+        {/* Гравець */}
+        <div className="player-hero" style={{ 
+          left: playerX, 
+          bottom: `${40 + playerY}px`,
+          transition: isJumping ? 'bottom 0.4s ease-out' : 'bottom 0.4s ease-in'
+        }}>
+          🤖
         </div>
       </div>
 
-      {/* Редактор з'являється тільки якщо підійшов близько */}
-      <div className={`editor-side ${!isNearMob ? 'opacity-20 pointer-events-none' : ''}`}>
-        <div className="task-card">
-          <h3 className="text-green-500 font-bold">TARGET DETECTED: {levelData.difficulty}</h3>
-          <p className="text-sm italic text-zinc-400">{levelData.task}</p>
-        </div>
-        <CodeEditor 
-          key={currentLevel}
-          initialCode={levelData.code}
-          solution={levelData.fix}
-          onSuccess={() => {
-            setCurrentLevel(prev => prev + 1);
-            setIsNearMob(false);
-          }}
-        />
+      {/* Термінал, що випливає автоматично */}
+      <div className={`bottom-terminal ${isNearMob ? 'open' : ''}`}>
+        {isNearMob && (
+          <div className="terminal-inner">
+            <h3 className="status-red">Target: {levelData.difficulty} Bug</h3>
+            <p className="task-text">{levelData.task}</p>
+            <CodeEditor 
+              key={currentLevel}
+              initialCode={levelData.code}
+              solution={levelData.fix}
+              onSuccess={handleWin}
+            />
+          </div>
+        )}
       </div>
     </div>
   );

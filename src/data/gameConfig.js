@@ -1,27 +1,33 @@
 export const worlds = [
   {
-    name: "Світ алгоритмів",
+    name: "Світ Алгоритмів",
     levels: [
       {
         difficulty: "Easy",
-        mob: "bug_small.png", 
         task: "Виправ нескінченний цикл! Зміни i-- на i++",
         code: "for (let i = 0; i <= 5; i--) {\n  console.log(i);\n}",
-        fix: "for (let i = 0; i <= 5; i++) {\n  console.log(i);\n}"
+        fix: "i++",
+        mob: "bug_easy.png",
+        bg: "linear-gradient(to bottom, #1a1a2e, #050505)",
+        obstacles: [500, 900] // Позиції X для блоків
       },
       {
         difficulty: "Medium",
-        mob: "logic_error.png",
-        task: "ChaosCompiler пошкодив логіку. Довжина масиву має бути більше 0!",
-        code: "const data = [];\nif (data.length >= 0) {\n  process(data[0]);\n}",
-        fix: "const data = [];\nif (data.length > 0) {\n  process(data[0]);\n}"
+        task: "Додай перевірку на довжину масиву: data.length > 0",
+        code: "const data = [];\nprocess(data[0]);",
+        fix: "data.length > 0",
+        mob: "bug_medium.png", 
+        bg: "linear-gradient(to bottom, #2e1a1a, #050505)",
+        obstacles: [400, 700, 1100]
       },
       {
         difficulty: "Hard",
-        mob: "boss_final.png",
-        task: "БОС-РІВЕНЬ: Функція завжди повертає false. Виправ на true!",
-        code: "function checkSystem() {\n  return false;\n}",
-        fix: "function checkSystem() {\n  return true;\n}"
+        task: "Оброби помилку промісу: додай .catch(err => ...)",
+        code: "api.getData().then(res => show(res))",
+        fix: ".catch",
+        mob: "bug_boss.png",
+        bg: "linear-gradient(to bottom, #1a2e1a, #050505)",
+        obstacles: [300, 600, 900, 1200]
       }
     ]
   }
