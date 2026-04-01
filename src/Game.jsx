@@ -1,16 +1,22 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { worlds } from './data/gameConfig';
 import CodeEditor from './CodeEditor';
 import MobDisplay from './MobDisplay';
 
 const Game = () => {
+  const [currentWorld, setCurrentWorld] = useState(0);
   const [currentLevel, setCurrentLevel] = useState(0);
   const [playerX, setPlayerX] = useState(100);
   const [playerY, setPlayerY] = useState(0);
   const [isNearMob, setIsNearMob] = useState(false);
-  
-  const levelData = worlds[0].levels[currentLevel];
-  const mobX = 2500; 
+  const [showPortal, setShowPortal] = useState(false);
+  const [showWorldTitle, setShowWorldTitle] = useState(true);
+
+  // Данные текущего мира и уровня
+  const worldData = worlds[currentWorld];
+  const levelData = worldData.levels[currentLevel];
+  const mobX = 2500;
+  const portalX = 3000;
   const cameraX = Math.max(0, playerX - 300);
 
   // --- ФИЗИКА (КОНСТАНТЫ) ---
@@ -21,50 +27,55 @@ const Game = () => {
   const BRICK_WIDTH = 70;
   const BRICK_HEIGHT = 70;
 
-  const keys = useRef({}); 
+  const keys = useRef({});
   const pos = useRef({ x: 100, y: 0 });
   const velocityY = useRef(0);
   const isOnGround = useRef(true);
   const jumpCooldown = useRef(false);
-  const requestRef = useRef(); // Реф для контроля цикла
+  const requestRef = useRef();
 
-  // 1. СБРОС СОСТОЯНИЯ (Выполняется строго при смене уровня)
+  // 1. Сброс при смене уровня/мира
   useEffect(() => {
-    // Останавливаем старый цикл перед сбросом
     if (requestRef.current) cancelAnimationFrame(requestRef.current);
     
-    // Сброс физических показателей
     pos.current = { x: 100, y: 0 };
     velocityY.current = 0;
     isOnGround.current = true;
     jumpCooldown.current = false;
-    keys.current = {}; // Очищаем нажатые клавиши
+    keys.current = {};
     
     setPlayerX(100);
     setPlayerY(0);
     setIsNearMob(false);
+    setShowPortal(false);
+    setShowWorldTitle(true);
 
-    // Запускаем цикл заново для нового уровня
+    const timer = setTimeout(() => setShowWorldTitle(false), 3000);
+    
     requestRef.current = requestAnimationFrame(update);
+    return () => {
+        cancelAnimationFrame(requestRef.current);
+        clearTimeout(timer);
+    };
+  }, [currentLevel, currentWorld]);
 
-    return () => cancelAnimationFrame(requestRef.current);
-  }, [currentLevel]);
-
-  // 2. ИГРОВОЙ ЦИКЛ (Вынесен отдельно)
+  // 2. Игровой цикл
   const update = () => {
     let nextX = pos.current.x;
     let nextY = pos.current.y;
 
-    // Горизонтальное движение
+    // Горизонтальное движение (блокируем, если открыт терминал)
     let moveDir = 0;
-    if (keys.current['KeyD'] || keys.current['ArrowRight']) moveDir += 1;
-    if (keys.current['KeyA'] || keys.current['ArrowLeft']) moveDir -= 1;
+    if (!isNearMob) {
+        if (keys.current['KeyD'] || keys.current['ArrowRight'] || keys.current['d']) moveDir += 1;
+        if (keys.current['KeyA'] || keys.current['ArrowLeft'] || keys.current['a']) moveDir -= 1;
+    }
     
     const speed = isOnGround.current ? MOVE_SPEED : MOVE_SPEED * 0.9;
     nextX += moveDir * speed;
 
     // Прыжок
-    if ((keys.current['Space'] || keys.current['KeyW'] || keys.current['ArrowUp']) 
+    if (!isNearMob && (keys.current['Space'] || keys.current['KeyW'] || keys.current['ArrowUp'] || keys.current['w']) 
         && isOnGround.current && !jumpCooldown.current) {
       velocityY.current = JUMP_FORCE;
       isOnGround.current = false;
@@ -75,12 +86,10 @@ const Game = () => {
     velocityY.current -= GRAVITY;
     nextY += velocityY.current;
 
-    // Коллизии (берем препятствия текущего уровня напрямую из стейта в момент вызова)
+    // Коллизии
     let currentGround = 0;
     let hitWall = false;
-
-    // Защита от ошибок, если данные уровня не прогрузились
-    const obstacles = worlds[0].levels[currentLevel]?.obstacles || [];
+    const obstacles = levelData?.obstacles || [];
 
     obstacles.forEach(obsX => {
       const isWithinX = nextX + PLAYER_WIDTH > obsX + 5 && nextX < obsX + BRICK_WIDTH - 5;
@@ -98,16 +107,21 @@ const Game = () => {
       velocityY.current = 0;
       if (!isOnGround.current) {
         isOnGround.current = true;
-        setTimeout(() => { jumpCooldown.current = false; }, 100);
+        setTimeout(() => { jumpCooldown.current = false; }, 500);
       }
     }
 
-    // Проверка на моба
-    if (Math.abs(nextX - mobX) < 70 && nextY < 80) {
+    // Проверка моба и портала
+    if (!showPortal && Math.abs(nextX - mobX) < 70 && nextY < 80) {
       setIsNearMob(true);
     }
+    
+    if (showPortal && nextX > portalX - 50) {
+      handleNextLevel();
+      return; // Останавливаем цикл, handleNextLevel перезапустит его
+    }
 
-    // Применение координат
+    // Применение
     if (!hitWall) {
       pos.current.x = Math.max(0, nextX);
       setPlayerX(pos.current.x);
@@ -118,37 +132,53 @@ const Game = () => {
     requestRef.current = requestAnimationFrame(update);
   };
 
-  // Слушатели клавиатуры (один раз при монтировании)
-  useEffect(() => {
-    const onDown = (e) => { keys.current[e.code] = true; };
-    const onUp = (e) => { keys.current[e.code] = false; };
-    window.addEventListener('keydown', onDown);
-    window.addEventListener('keyup', onUp);
-    return () => {
-      window.removeEventListener('keydown', onDown);
-      window.removeEventListener('keyup', onUp);
-    };
-  }, []);
-
-  const handleWin = () => {
-    if (currentLevel < worlds[0].levels.length - 1) {
+  const handleNextLevel = () => {
+    if (currentLevel < worldData.levels.length - 1) {
       setCurrentLevel(prev => prev + 1);
+    } else if (currentWorld < worlds.length - 1) {
+      setCurrentWorld(prev => prev + 1);
+      setCurrentLevel(0);
     } else {
-      alert("FINAL LEVEL CLEARED!");
+      alert("ПОЗДРАВЛЯЮ! ВСЕ МИРЫ ОЧИЩЕНЫ!");
     }
   };
 
+  // Слушатели клавиш
+  useEffect(() => {
+    const onDown = (e) => { keys.current[e.code] = true; keys.current[e.key.toLowerCase()] = true; };
+    const onUp = (e) => { keys.current[e.code] = false; keys.current[e.key.toLowerCase()] = false; };
+    window.addEventListener('keydown', onDown);
+    window.addEventListener('keyup', onUp);
+    return () => { window.removeEventListener('keydown', onDown); window.removeEventListener('keyup', onUp); };
+  }, []);
+
   return (
-    <div className="game-screen" style={{ background: levelData?.bg || '#000' }}>
-      <div className="world-layer" style={{ transform: `translateX(-${cameraX}px)`, position: 'relative', width: '5000px', height: '100%' }}>
+    <div className="game-screen" style={{ background: worldData.theme?.bg || levelData?.bg }}>
+      <div className="ui-overlay">
+        <div className="ui-world">{worldData.name}</div>
+        <div className="ui-level">СЕКТОР: {currentLevel + 1}</div>
+      </div>
+
+      <div className={`world-title-anim ${showWorldTitle ? 'active' : ''}`}>
+        <h1 style={{ color: worldData.theme?.accent }}>{worldData.name}</h1>
+      </div>
+
+      <div className="world-layer" style={{ transform: `translateX(-${cameraX}px)`, width: '5000px', height: '100%', position: 'relative' }}>
         <div className="ground-line"></div>
+        
         {levelData?.obstacles.map((pos, i) => (
           <div key={`lvl-${currentLevel}-obj-${i}`} className="brick" style={{ left: pos, bottom: '40px' }}></div>
         ))}
         
-        <div className="mob-wrapper" style={{ left: mobX, bottom: '40px' }}>
-          <MobDisplay image={levelData?.mob} />
-        </div>
+        {!showPortal ? (
+          <div className="mob-wrapper" style={{ left: mobX, bottom: '40px' }}>
+            <MobDisplay image={levelData?.mob} />
+          </div>
+        ) : (
+          <div className="portal-effect" style={{ left: portalX, bottom: '40px' }}>
+            <div className="portal-core" style={{ backgroundColor: worldData.theme?.accent }} />
+          </div>
+        )}
 
         <div className="player-hero" style={{ 
           left: playerX, 
@@ -165,13 +195,16 @@ const Game = () => {
       <div className={`bottom-terminal ${isNearMob ? 'open' : ''}`}>
         {isNearMob && (
           <div className="terminal-inner">
-            <h2 style={{ color: '#00ff41' }}>LEVEL {currentLevel + 1} DEBUG MODE</h2>
+            <h2 style={{ color: worldData.theme?.accent || '#00ff41' }}>DEBUG: {levelData.difficulty}</h2>
             <p className="task-text">{levelData?.task}</p>
             <CodeEditor 
-              key={`editor-lvl-${currentLevel}`} // Гарантирует смену задания
+              key={`editor-${currentWorld}-${currentLevel}`}
               initialCode={levelData?.code}
               solution={levelData?.fix}
-              onSuccess={handleWin}
+              onSuccess={() => {
+                setIsNearMob(false);
+                setShowPortal(true);
+              }}
             />
           </div>
         )}
