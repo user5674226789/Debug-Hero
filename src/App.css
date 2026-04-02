@@ -529,3 +529,59 @@ body {
   background: #ff3e3e;
   transition: width 0.3s ease;
 }
+
+.boss-dialogue {
+  position: fixed;
+  top: 20%;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(0, 0, 0, 0.9);
+  border: 1px solid #00ff41;
+  padding: 20px;
+  color: #00ff41;
+  font-family: 'Courier New', monospace;
+  z-index: 1000;
+  box-shadow: 0 0 20px rgba(0, 255, 65, 0.4);
+  max-width: 80%;
+}
+
+.dnd-block {
+  background: #333;
+  border: 1px solid #555;
+  padding: 10px;
+  margin: 5px 0;
+  cursor: grab;
+  color: #fff;
+  border-radius: 4px;
+}
+
+.dnd-block:active { cursor: grabbing; background: #444; }
+
+.binary-particle {
+  animation: fadeOut 1s forwards;
+}
+
+@keyframes fadeOut {
+  from { opacity: 1; transform: scale(1); }
+  to { opacity: 0; transform: scale(0.5) translateY(-50px); }
+}
+
+.animate-shake {
+  animation: shake 0.2s infinite;
+}
+
+@keyframes shake {
+  0% { transform: translate(1px, 1px); }
+  50% { transform: translate(-1px, -2px); }
+  100% { transform: translate(1px, 1px); }
+}
+
+@keyframes particle-fade {
+  0% { opacity: 1; transform: translate(0, 0); }
+  100% { opacity: 0; transform: translate(var(--vx), var(--vy)); }
+}
+.boss-dialogue-box {
+  position: absolute; top: 20%; left: 50%; transform: translateX(-50%);
+  background: rgba(0,0,0,0.8); border: 1px solid #00ff41; padding: 15px;
+  color: #00ff41; font-family: monospace; z-index: 100;
+}
