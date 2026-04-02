@@ -4,7 +4,7 @@
 
 ![Status](https://img.shields.io/badge/STATUS-DEVELOPMENT-00ff41?style=for-the-badge&logo=react)
 ![Engine](https://img.shields.io/badge/ENGINE-VITE-646CFF?style=for-the-badge&logo=vite)
-![Style](https://img.shields.io/badge/STYLE-INDUSTRIAL_ARCHIVE-black?style=for-the-badge)
+![Style](https://img.shields.io/badge/CYBERPUNK_ARCHIVE-black?style=for-the-badge)
 
 **Debug Hero** — це освітня логічна гра, створена для того, щоб перетворити виснажливий пошук помилок у коді на захопливу кіберпанк-пригоду. Ви граєте за дрона-налагоджувача, який має врятувати систему від вірусу **ChaosCompiler**.
 
