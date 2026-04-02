@@ -1,11 +1,13 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { worlds } from './data/gameConfig';
-import CodeEditor from './CodeEditor'; 
-import TaskHandler from './TaskHandler'; // Переконайся, що цей файл створено (код нижче)
+import CodeEditor from './CodeEditor';
+import TaskHandler from './TaskHandler';
 import MobDisplay from './MobDisplay';
 import Intro from './Intro';
+// Імпорт аудіо (переконайся, що шлях правильний)
+import ambientBgUrl from './assets/sounds/ambient_bg.mp3';
 
-// --- ДОПОМІЖНІ КОМПОНЕНТИ (ВБУДОВАНІ) ---
+// --- ДОПОМІЖНІ КОМПОНЕНТИ ---
 
 const BinaryParticles = ({ x, y, onComplete }) => {
   const [parts, setParts] = useState([]);
@@ -60,10 +62,46 @@ const WorldTransition = ({ nextWorldName, onComplete }) => {
   );
 };
 
+// --- ФІНАЛЬНА СЦЕНА (RECOVERY COMPLETE) ---
+
+const FinalRecoveryScreen = () => {
+  const [logs, setLogs] = useState([]);
+  const fullLogs = [
+    "CLEANING MALWARE RESIDUE...",
+    "RECONSTRUCTING DATA STRUCTURES...",
+    "RESTORING SYSTEM CORE...",
+    "INTEGRITY CHECK: 100%",
+    "RECOVERY COMPLETE. SYSTEM SECURE.",
+    "THANK YOU, DEBUG HERO."
+  ];
+
+  useEffect(() => {
+    fullLogs.forEach((line, i) => {
+      setTimeout(() => setLogs(prev => [...prev, line]), i * 700);
+    });
+  }, []);
+
+  return (
+    <div className="intro-container crt-overlay">
+      <div className="terminal-border" style={{ padding: '40px', borderColor: '#00ff41' }}>
+        <h1 className="glitch-text" style={{ color: '#00ff41', fontSize: '40px' }}>SYSTEM RECOVERY</h1>
+        <div style={{ textAlign: 'left', marginTop: '20px', fontFamily: 'monospace', color: '#00ff41' }}>
+          {logs.map((log, i) => <p key={i} style={{ margin: '5px 0' }}>{`>> ${log}`}</p>)}
+        </div>
+        {logs.length === fullLogs.length && (
+          <button className="start-btn animate-fadeIn" onClick={() => window.location.reload()}>
+            REBOOT TO MAIN MENU
+          </button>
+        )}
+      </div>
+    </div>
+  );
+};
+
 // --- ОСНОВНИЙ КОМПОНЕНТ ГРИ ---
 
 const Game = () => {
-  const [gameState, setGameState] = useState('intro');
+  const [gameState, setGameState] = useState('intro'); // intro, playing, transitioning, dead, final
   const [currentWorld, setCurrentWorld] = useState(0);
   const [currentLevel, setCurrentLevel] = useState(0);
   const [obstacles, setObstacles] = useState([]);
@@ -74,7 +112,6 @@ const Game = () => {
   const [showPortal, setShowPortal] = useState(false);
   const [showTitle, setShowTitle] = useState(false);
   
-  // Ефекти та Діалоги
   const [particles, setParticles] = useState(null);
   const [bossDialogue, setBossDialogue] = useState(null);
 
@@ -83,6 +120,7 @@ const Game = () => {
   const velocity = useRef({ x: 0, y: 0 });
   const keys = useRef({});
   const timerInterval = useRef(null);
+  const bgAudioRef = useRef(new Audio(ambientBgUrl));
 
   const worldData = worlds[currentWorld];
   const levelData = worldData.levels[currentLevel];
@@ -93,13 +131,26 @@ const Game = () => {
   const BLOCK_SIZE = 70;
   const BLOCK_HEIGHT = 70;
 
+  // Керування фоновим звуком
+  useEffect(() => {
+    if (gameState === 'playing') {
+      bgAudioRef.current.loop = true;
+      bgAudioRef.current.volume = 0.3;
+      bgAudioRef.current.play().catch(() => console.log("Audio play deferred"));
+    } else {
+      bgAudioRef.current.pause();
+    }
+    return () => bgAudioRef.current.pause();
+  }, [gameState]);
+
   // Логіка ChaosCompiler (Діалог)
   useEffect(() => {
-    if (isNearMob && levelData?.isBoss) {
+    const isBoss = currentWorld === worlds.length - 1 && currentLevel === worldData.levels.length - 1;
+    if (isNearMob && isBoss) {
       setBossDialogue(">> ChaosCompiler: Твій код застарів. Видаляю твій доступ до пам'яті...");
-      setTimeout(() => setBossDialogue(null), 4000);
+      setTimeout(() => setBossDialogue(null), 4500);
     }
-  }, [isNearMob, levelData]);
+  }, [isNearMob, currentWorld, currentLevel, worldData.levels.length]);
 
   const generateObstacles = useCallback(() => {
     const obs = [];
@@ -138,8 +189,7 @@ const Game = () => {
     } else if (!isLastLevelInWorld) {
       setCurrentLevel(prev => prev + 1);
     } else {
-      alert("🏆 ВІТАЮ! ГОЛОВНИЙ СЕРВЕР ПОВНІСТЮ ОЧИЩЕНО!");
-      window.location.reload();
+      setGameState('final'); // Замість alert тепер фінальна сцена
     }
   }, [currentLevel, currentWorld, worldData.levels.length]);
 
@@ -232,6 +282,7 @@ const Game = () => {
   }, []);
 
   if (gameState === 'intro') return <Intro onStart={() => setGameState('playing')} />;
+  if (gameState === 'final') return <FinalRecoveryScreen />;
   
   if (gameState === 'transitioning') return (
     <WorldTransition 
@@ -284,7 +335,6 @@ const Game = () => {
           <div key={i} className="brick" style={{ left: pos, bottom: '40px' }}>🧱</div>
         ))}
         
-        {/* ЕФЕКТ ЧАСТИНКИ */}
         {particles && <BinaryParticles x={particles.x} y={particles.y} onComplete={() => setParticles(null)} />}
 
         {!showPortal ? (
@@ -301,26 +351,26 @@ const Game = () => {
         <div className="player-hero" style={{ left: renderPos.x, bottom: `${40 + renderPos.y}px`, transition: 'none' }}>🤖</div>
       </div>
 
-<div className={`bottom-terminal ${isNearMob ? 'open' : ''}`}>
-  {isNearMob && levelData && (
-    <TaskHandler 
-      key={`${currentWorld}-${currentLevel}`}
-      type={levelData.type || 'code'} 
-      task={levelData.task}           // ПЕРЕВІР ЦЕЙ РЯДОК
-      initialCode={levelData.code} 
-      blocks={levelData.blocks}
-      solution={levelData.fix} 
-      onSuccess={() => {
-        setParticles({ x: mobX, y: 80 });
-        setIsNearMob(false);
-        setShowPortal(true);
-        setScore(s => s + (timeLeft * 100));
-        clearInterval(timerInterval.current);
-      }} 
-      onWrong={() => setHp(h => h - 20)}
-    />
-  )}
-</div>
+      <div className={`bottom-terminal ${isNearMob ? 'open' : ''}`}>
+        {isNearMob && levelData && (
+          <TaskHandler 
+            key={`${currentWorld}-${currentLevel}`}
+            type={levelData.type || 'code'} 
+            task={levelData.task}
+            initialCode={levelData.code} 
+            blocks={levelData.blocks}
+            solution={levelData.fix} 
+            onSuccess={() => {
+              setParticles({ x: mobX, y: 80 });
+              setIsNearMob(false);
+              setShowPortal(true);
+              setScore(s => s + (timeLeft * 100));
+              clearInterval(timerInterval.current);
+            }} 
+            onWrong={() => setHp(h => h - 20)}
+          />
+        )}
+      </div>
     </div>
   );
 };

@@ -585,3 +585,42 @@ body {
   background: rgba(0,0,0,0.8); border: 1px solid #00ff41; padding: 15px;
   color: #00ff41; font-family: monospace; z-index: 100;
 }
+
+/* Анімація появи діалогу боса */
+.boss-dialogue-box {
+  position: fixed;
+  top: 15%;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(0, 0, 0, 0.95);
+  border: 2px solid #ff3e3e; /* Червоний для небезпеки */
+  padding: 20px;
+  color: #ff3e3e;
+  font-family: 'Courier New', monospace;
+  z-index: 1000;
+  box-shadow: 0 0 30px rgba(255, 62, 62, 0.5);
+  min-width: 400px;
+}
+
+.final-logs p {
+  font-size: 18px;
+  letter-spacing: 1px;
+}
+
+.hp-bar {
+  height: 12px;
+  border: 1px solid #555;
+  overflow: hidden;
+  margin-left: 10px;
+}
+
+/* Ефект для фінального тексту */
+.glitch-text {
+  animation: glitch 1s linear infinite;
+}
+
+@keyframes glitch {
+  2%, 64% { transform: translate(2px, 0) skew(0deg); }
+  4%, 60% { transform: translate(-2px, 0) skew(0deg); }
+  62% { transform: translate(0, 0) skew(5deg); }
+}
